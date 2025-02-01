@@ -1,7 +1,6 @@
 import dnsclass
 import saidas
 import argparse
-import json
 
 dns = dnsclass.Dnsscan
 saida = saidas.Saidas
@@ -19,14 +18,6 @@ parser.add_argument("--ipv", help="Digite [4] para ipv4, [6] para ipv6, [all] pa
 parser.add_argument("--output", help="Salva resultados em um arquivo de texto simples")
 parser.add_argument("--json", help="Salvar resultados em um arquivo JSON")
 args = parser.parse_args()
-
-def json_saved(tool):
-	arquivo_json = json.dumps(tool)
-	if args.json:
-        	with open(f"{args.json}", "w") as f:
-                	f.write(arquivo_json)
-	else:
-        	None
 
 if args.type == "cname":
 	checa_cname = dns.CheckCNAME(args.domain, args.wordlist)
