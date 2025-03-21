@@ -60,7 +60,7 @@ class Dnsscan():
 				i = i.replace("\n", "")
 				dominio_montado = f"{i}.{dominio}"
 				if dominio_montado not in consultado:
-					if ipv4_6 == "4":
+					if ipv4_6 == "4" or ipv4_6 == None:
 						addr4 = DNSipv4(dominio_montado)
 						consultado.append(dominio_montado)
 
@@ -81,12 +81,6 @@ class Dnsscan():
 							dominios4[dominio_montado] = addr4
 						if addr6 != 0:
 							dominios6[dominio_montado] = addr6
-					else:
-						addr4 = DNSipv4(dominio_montado)
-						consultado.append(dominio_montado)
-
-						if addr4 != 0:
-							dominios4[dominio_montado] = addr4
 
 
 		dominios["ipv4"] = dominios4
