@@ -20,9 +20,15 @@ parser.add_argument("--json", help="Salvar resultados em um arquivo JSON")
 args = parser.parse_args()
 
 if args.type == "cname":
-	checa_cname = dns.CheckCNAME(args.domain, args.wordlist)
-	saida.output_comum(checa_cname, args.output)
-	saida.output_json(checa_cname, args.json)
+	async def run_check_cname():
+		check_cname = dns.CheckCNAME()
+		results_cname = await check_cname.Main(args.domain, args.wordlist)
+		for i in results_cname:
+			print(i)
+		return results_cname
+	results_cname = asyncio.run(run_check_cname())
+	saida.output_comum(results_cname, args.output)
+	saida.output_json(results_cname, args.json)
 elif args.type == "sub":
 	verifica_subdominio_ativo = dns.SubdomainBF(args.domain, args.wordlist, args.ipv)
 	saida.output_comum(verifica_subdominio_ativo, args.output)
