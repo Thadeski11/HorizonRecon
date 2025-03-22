@@ -1,6 +1,7 @@
 import dnsclass
 import saidas
 import argparse
+import asyncio
 
 dns = dnsclass.Dnsscan
 saida = saidas.Saidas
