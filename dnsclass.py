@@ -1,31 +1,43 @@
 import socket
 import dns.resolver
 import time
+import asyncio
 
 class Dnsscan():
-	def CheckCNAME(dominio, wordlist):
-		resultados_cname = {}
+	class CheckCNAME():
+		async def Analyzer(self, url, semaphore):
+			async with semaphore:
+				await asyncio.sleep(1)
+				try:
+					response = await asyncio.to_thread(dns.resolver.resolve, url, "CNAME")
+					cname = str(response[0].target)
+					return url, cname
+				except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN):
+					return url, None
 
-		with open(wordlist) as f:
-			for i in f.readlines():
-				i = i.replace("\n", "")
-				montado = f"{i}.{dominio}"
-
-				while True:
-					try:
-						resposta = dns.resolver.resolve(montado, "CNAME")
-						cname = str(resposta[0].target)
-						print(f"{montado} tem um alias {cname}")
-						resultados_cname[montado] = cname
-						break
-					except dns.resolver.NoAnswer:
-						break
-					except dns.resolver.NXDOMAIN:
-						break
-					except dns.resolver.LifetimeTimeout:
-						print("Caiu no timeout")
-						time.sleep(2)
-		return resultados_cname
+		async def Main(self, domain, wordlist, timed=3):
+			semaphore = asyncio.Semaphore(timed)
+			urls = []
+			results = []
+			with open(wordlist, "r") as w:
+				for i in w:
+					i = i.strip()
+					url_montada = f"{i}.{domain}"
+					urls.append(url_montada)
+			while True:
+				try:
+					tasks = [self.Analyzer(url, semaphore) for url in urls]
+					tasks_done = await asyncio.gather(*tasks)
+					for url, cname in tasks_done:
+						if cname:
+							results.append(f"{url} tem um alias {cname}")
+					break
+				
+				except dns.resolver.LifetimeTimeout:
+					print("Caiu no timeout")
+					await asyncio.sleep(2)
+	
+			return results
 
 	def SubdomainBF(dominio, wordlist, ipv4_6=None):
 		def DNSipv4(dominio_montado):
