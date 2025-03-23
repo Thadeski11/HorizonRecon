@@ -12,7 +12,8 @@ class Dnsscan():
 					response = await asyncio.to_thread(dns.resolver.resolve, url, "CNAME")
 					cname = str(response[0].target)
 					return url, cname
-				except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN):
+				except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
+					await asyncio.sleep(5)
 					return url, None
 
 		async def Main(self, domain, wordlist, timed=3):
