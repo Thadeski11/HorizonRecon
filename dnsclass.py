@@ -7,16 +7,20 @@ class Dnsscan():
 	class CheckCNAME():
 		async def Analyzer(self, url, semaphore):
 			async with semaphore:
-				await asyncio.sleep(1)
 				try:
-					response = await asyncio.to_thread(dns.resolver.resolve, url, "CNAME")
+					await asyncio.sleep(1)
+					resolver = dns.asyncresolver.Resolver()
+					resolver.nameservers = ["8.8.8.8", "1.1.1.1"]
+					response = await resolver.resolve(url, "CNAME")
 					cname = str(response[0].target)
 					return url, cname
 				except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
-					await asyncio.sleep(5)
+					return url, None
+				except dns.resolver.LifetimeTimeout:
+					await asyncio.sleep(1)
 					return url, None
 
-		async def Main(self, domain, wordlist, timed=3):
+		async def Main(self, domain, wordlist, timed=10):
 			semaphore = asyncio.Semaphore(timed)
 			urls = []
 			results = []
@@ -25,18 +29,13 @@ class Dnsscan():
 					i = i.strip()
 					url_montada = f"{i}.{domain}"
 					urls.append(url_montada)
-			while True:
-				try:
-					tasks = [self.Analyzer(url, semaphore) for url in urls]
-					tasks_done = await asyncio.gather(*tasks)
-					for url, cname in tasks_done:
-						if cname:
-							results.append(f"{url} tem um alias {cname}")
-					break
-				
-				except dns.resolver.LifetimeTimeout:
-					print("Caiu no timeout")
-					await asyncio.sleep(2)
+			
+			tasks = [self.Analyzer(url, semaphore) for url in urls]
+			tasks_done = await asyncio.gather(*tasks)
+			for url, cname in tasks_done:
+				if cname:
+					results.append(f"[{url}] aponta para o CNAME: [{cname}]")
+					
 	
 			return results
 
