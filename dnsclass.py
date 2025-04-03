@@ -1,5 +1,5 @@
 import socket
-import dns.resolver
+import dns.asyncresolver
 import time
 import asyncio
 
