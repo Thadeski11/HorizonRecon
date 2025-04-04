@@ -32,9 +32,14 @@ if args.type == "cname":
 	saida.output_comum(results_cname, args.output)
 	saida.output_json(results_cname, args.json)
 elif args.type == "sub":
-	verifica_subdominio_ativo = dns.SubdomainBF(args.domain, args.wordlist, args.ipv)
-	saida.output_comum(verifica_subdominio_ativo, args.output)
-	saida.output_json(verifica_subdominio_ativo, args.json)
+	async def run_check_subdomain():
+		subdomainbf = dns.SubdomainBF()
+		results_subdomains = await subdomainbf.Main(args.domain, args.wordlist, args.time, args.ipv)
+		print(results_subdomains)
+		return results_subdomains
+	results_subdomains = asyncio.run(run_check_subdomain())
+	saida.output_comum(results_subdomains, args.output)
+	saida.output_json(results_subdomains, args.json)
 elif args.type == "whois":
 	consulta_whois = dns.Whois(args.domain)
 	saida.output_comum(consulta_whois, args.output)
