@@ -8,6 +8,12 @@ class Saidas():
 					for i in tool:
 						f.write(i)
 						f.write("\n")
+			if isinstance(tool, dict):
+				with open(f"{nome_arquivo}", "w") as f:
+					for type, info in tool.items():
+						f.write(f"{type}:\n")
+						for host, ip in info.items():
+							f.write(f"{host}: {ip}\n")
 			else:		
 				with open(f"{nome_arquivo}", "w") as f:
 					f.write(tool)
