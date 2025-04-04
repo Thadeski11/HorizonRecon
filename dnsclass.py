@@ -1,6 +1,5 @@
 import socket
 import dns.asyncresolver
-import time
 import asyncio
 
 class Dnsscan():
@@ -39,65 +38,70 @@ class Dnsscan():
 	
 			return results
 
-	def SubdomainBF(dominio, wordlist, ipv4_6=None):
-		def DNSipv4(dominio_montado):
-			try:
-				dados = socket.getaddrinfo(dominio_montado, None, socket.AF_INET)
-				addr = dados[2][4][0]
+	class SubdomainBF():
+		async def DNSipv4(self, subdomain, semaphore):
+			async with semaphore:
+				try:
+					loop = asyncio.get_running_loop()
+					dados = await loop.run_in_executor(None, socket.getaddrinfo, subdomain, None, socket.AF_INET)
+					addr = dados[2][4][0]
+					return subdomain, addr
+				except (socket.gaierror, UnicodeError):
+					return subdomain, None
 
-				print(f"{dominio_montado} --- {addr}")
-				return addr
-			except socket.gaierror:
-				return 0
-
-
-		def DNSipv6(dominio_montado):
-			try:
-				dados = socket.getaddrinfo(dominio_montado, None, socket.AF_INET6)
-				addr = dados[2][4][0]
-
-				print(f"{dominio_montado} --- {addr}")
-				return addr
-			except socket.gaierror:
-				return 0
-
-
-		consultado = []
-		dominios4 = {}
-		dominios6 = {}
-		dominios = {}
-
-		with open(wordlist) as f:
-			for i in f.readlines():
-				i = i.replace("\n", "")
-				dominio_montado = f"{i}.{dominio}"
-				if dominio_montado not in consultado:
-					if ipv4_6 == "4" or ipv4_6 == None:
-						addr4 = DNSipv4(dominio_montado)
-						consultado.append(dominio_montado)
-
-						if addr4 != 0:
-							dominios4[dominio_montado] = addr4
-					elif ipv4_6 == "6":
-						addr6 = DNSipv6(dominio_montado)
-						consultado.append(dominio_montado)
-
-						if addr6 != 0:
-							dominios6[dominio_montado] = addr6
-					elif ipv4_6 == "all":
-						addr4 = DNSipv4(dominio_montado)
-						addr6 = DNSipv6(dominio_montado)
-						consultado.append(dominio_montado)
-
-						if addr4 != 0:
-							dominios4[dominio_montado] = addr4
-						if addr6 != 0:
-							dominios6[dominio_montado] = addr6
+		async def DNSipv6(self, subdomain, semaphore):
+			async with semaphore:
+				try:
+					loop = asyncio.get_running_loop()
+					dados = await loop.run_in_executor(None, socket.getaddrinfo, subdomain, None, socket.AF_INET6)
+					addr = dados[2][4][0]
+					return subdomain, addr
+				except (socket.gaierror, UnicodeError):
+					return subdomain, None
 
 
-		dominios["ipv4"] = dominios4
-		dominios["ipv6"] = dominios6
-		return dominios
+		async def Main(self, domain, wordlist, timed=10, ipv4_6=None):
+			semaphore = asyncio.Semaphore(timed)
+
+			subdomains = []
+			subdomains_4 = {}
+			subdomains_6 = {}
+			subdomains_done = {}
+
+			with open(wordlist, "r") as f:
+				for i in f:
+					i = i.strip()
+					subdomain_ass = f"{i}.{domain}"
+					subdomains.append(subdomain_ass)
+
+			if ipv4_6 == "4" or ipv4_6 == None:
+				addr4 = [self.DNSipv4(subdomain, semaphore) for subdomain in subdomains]
+				tasks4_done = await asyncio.gather(*addr4)
+				for subdomain, addr in tasks4_done:
+					if addr:
+						subdomains_4[subdomain] = addr
+			elif ipv4_6 == "6":
+				addr6 = [self.DNSipv6(subdomain, semaphore) for subdomain in subdomains] 
+				tasks6_done = await asyncio.gather(*addr6)
+				for subdomain, addr in tasks6_done:
+					if addr:
+						subdomains_6[subdomain] = addr	
+			elif ipv4_6 == "all":
+				addr4 = [self.DNSipv4(subdomain, semaphore) for subdomain in subdomains]
+				addr6 = [self.DNSipv6(subdomain, semaphore) for subdomain in subdomains]
+				tasks4_done = await asyncio.gather(*addr4)
+				tasks6_done = await asyncio.gather(*addr6)
+				for subdomain, addr in tasks4_done:
+					if addr:
+						subdomains_4[subdomain] = addr
+				for subdomain, addr in tasks6_done:
+					if addr:
+						subdomains_6[subdomain] = addr
+
+
+			subdomains_done["ipv4"] = subdomains_4
+			subdomains_done["ipv6"] = subdomains_6
+			return subdomains_done
 
 	def Whois(dominio):
 		def openSocket(d, data):
