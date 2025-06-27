@@ -1,5 +1,4 @@
-import dnsclass
-import saidas
+import classes
 import argparse
 import asyncio
 
